@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST Digit Recognizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            gap: 20px;
+        }
+
+        .canvas-wrapper {
+            display: flex;
+            gap: 20px;
+        }
+
+        .canvas-container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #f1f1f1;
+        }
+
+        canvas {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            width: 280px;
+            height: 280px;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #6e45e2, #88d3ce);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-picker {
+            margin-top: 10px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #88d3ce;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Animation for the result */
+        #result.fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="canvas-wrapper">
+            <!-- Drawing Canvas -->
+            <div class="canvas-container">
+                <h1>Draw Digit</h1>
+                <canvas id="drawCanvas" width="280" height="280"></canvas>
+                <input type="color" id="colorPicker" class="color-picker" value="#ffffff">
+            </div>
+
+            <!-- Predicted Digit Canvas -->
+            <div class="canvas-container">
+                <h1 style="margin-bottom: 10px;">Predicted Digit</h1>
+                <canvas id="resultCanvas" width="280" height="280" style="margin-top: 0;"></canvas>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="buttons">
+            <button onclick="clearCanvas()">Clear</button>
+            <button onclick="submitCanvas()">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        const drawCanvas = document.getElementById('drawCanvas');
+        const drawCtx = drawCanvas.getContext('2d');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const resultCtx = resultCanvas.getContext('2d');
+        const colorPicker = document.getElementById('colorPicker');
+
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Event listeners for drawing
+        drawCanvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        });
+        drawCanvas.addEventListener('mouseup', () => drawing = false);
+        drawCanvas.addEventListener('mousemove', draw);
+
+        function draw(e) {
+            if (!drawing) return;
+            drawCtx.strokeStyle = colorPicker.value;
+            drawCtx.lineWidth = 10;
+            drawCtx.lineJoin = 'round';
+            drawCtx.lineCap = 'round';
+
+            drawCtx.beginPath();
+            drawCtx.moveTo(lastX, lastY);
+            drawCtx.lineTo(e.offsetX, e.offsetY);
+            drawCtx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+        }
+
+        function clearCanvas() {
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        }
+
+        async function submitCanvas() {
+            // Convert drawn digit to image data
+            const dataURL = drawCanvas.toDataURL('image/png');
+            const formData = new FormData();
+            formData.append('digit', dataURItoBlob(dataURL), 'digit.png');
+
+            // Send the image to the server for prediction
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            // Display the predicted digit on the result canvas
+            resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            resultCtx.font = '200px Inter';
+            resultCtx.fillStyle = 'white';
+            resultCtx.textAlign = 'center';
+            resultCtx.textBaseline = 'middle';
+            resultCtx.fillText(data.digit, resultCanvas.width / 2, resultCanvas.height / 2);
+        }
+
+        function dataURItoBlob(dataURI) {
+            const byteString = atob(dataURI.split(',')[1]);
+            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], { type: mimeString });
+        }
+    </script>
+</body>
+</html>
