@@ -21,16 +21,12 @@ Try the demo of the **Digit Recognition Web App** directly by visiting the deplo
 
 - **Frontend:**
   - **HTML5, CSS3, JavaScript**: For the structure, styling, and interactivity of the web app.
-  - **Canvas API**: For drawing the digits.
-  - **Fetch API**: For submitting the drawn images to the backend for prediction.
 
 - **Backend:**
-  - **Python, TensorFlow**: For building the machine learning model that recognizes the digits.
   - **Flask**: For creating the server to handle requests and serve the model.
 
-- **Deployment:**
-  - **GitHub Pages (Frontend)**: For hosting the frontend of the app.
-  - **Heroku / Google Cloud / AWS**: For hosting the backend API, making predictions in real-time.
+- **Deep Learning:**
+  - **TensorFlow**: For building the machine learning model that recognizes the digits.
 
 ## 🎯 How It Works
 
